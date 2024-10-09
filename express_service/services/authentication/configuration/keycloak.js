@@ -1,0 +1,13 @@
+module.exports = {
+  KC_REALM: process.env.KC_REALM,
+  KC_CLIENT_ID: process.env.KC_CLIENT_ID,
+  KC_CLIENT_SECRET: process.env.KC_CLIENT_SECRET,
+  KC_CLIENT_UUID: process.env.KC_CLIENT_UUID,
+  KC_SERVER_URL: process.env.KC_SERVER_URL,
+  KC_ADMIN_ROLE: 'admin',
+  KC_ADMIN_ROLE_ID: 'f2b04383-446b-4df2-97e7-2dd1518a5947',
+  KC_EMPLOYER_ROLE: 'employer',
+  KC_EMPLOYER_ROLE_ID: 'bffc1138-e9fd-4234-97f9-900d9743ea89',
+  KC_CANDIDATE_ROLE: 'candidate',
+  KC_CANDIDATE_ROLE_ID: 'a3c22fd2-e201-4740-9297-cbb88e5f300c',
+};

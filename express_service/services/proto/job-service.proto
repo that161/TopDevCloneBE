@@ -1,0 +1,86 @@
+// to generate: npm install -g protoc-gen-js 
+//protoc --js_out=import_style=commonjs,binary:. .\job-service.proto
+syntax = "proto3";
+
+message JobRequest {
+    int32 id = 1;
+}
+
+message JobResponse {
+    int32 id = 1;
+    string title = 2;
+    string level = 3;
+    string jobType = 4;
+    string endDate = 5;
+    string companyName = 6;
+}
+
+message CreateCompanyRequest {
+    string hrId = 1;
+    string name = 2;
+    string phoneNumber = 3;
+}
+
+message CreateCompanyResponse {
+    string companyId = 1;
+    bool isOk = 2;
+}
+
+message GetCompanyStatusRequest {
+    string hrId = 1;
+}
+
+message GetCompanyStatusResponse {
+    int32 status = 1;
+}
+
+message ApproveCompanyRequest {
+    repeated string hrIds = 1;
+    int32 status = 2;
+}
+
+message UpdateStatusResponse {
+    bool isOk = 1;
+}
+
+message RejectCompanyRequest {
+    string hrId = 1;
+    int32 status = 2;
+    string reason = 3; 
+}
+
+message GetCompaniesStatusRequest {
+    repeated string hrIds = 1;
+}
+
+message ItemAddress {
+    string city = 1;
+    string addressDetail = 2;
+}
+
+message ItemGetCompaniesStatusResponse {
+    string hrId = 1;
+    string companyId = 2;
+    int32 status = 3;
+    string logo = 4;
+    string name = 5;
+    repeated string nationality = 6;
+    string website = 7;
+    string phoneNumber = 8;
+    repeated ItemAddress addresses = 9;
+    repeated string industry = 10;
+}
+
+message GetCompaniesStatusResponse {
+    repeated ItemGetCompaniesStatusResponse result = 1;
+}
+
+service JobService {
+    rpc GetCompanyStatus (GetCompanyStatusRequest) returns (GetCompanyStatusResponse);
+    rpc GetJobInformation (JobRequest) returns (JobResponse);
+    rpc UpdateApplyCountGrpc (JobRequest) returns (JobResponse);
+    rpc CreateCompanyGrpc (CreateCompanyRequest) returns (CreateCompanyResponse);
+    rpc ApproveCompanyGrpc (ApproveCompanyRequest) returns (UpdateStatusResponse);
+    rpc RejectCompanyGrpc (RejectCompanyRequest) returns (UpdateStatusResponse);
+    rpc GetCompaniesStatusGrpc (GetCompaniesStatusRequest) returns (GetCompaniesStatusResponse);
+}

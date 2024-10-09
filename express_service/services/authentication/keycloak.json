@@ -1,0 +1,7 @@
+{
+  "realm": "Topdev",
+  "bearer-only": true,
+  "auth-server-url": "http://keycloak:8080",
+  "ssl-required": "external",
+  "resource": "TopdevClient"
+}

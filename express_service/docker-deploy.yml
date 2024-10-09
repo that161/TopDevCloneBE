@@ -1,0 +1,218 @@
+version: '3.7'
+
+services:
+  gateway:
+    image: pbhuy/gateway
+    hostname: gateway
+    ports:
+      - '5000:5000'
+    restart: always
+    environment:
+      - BASE_URL_USER_SERVICE=http://user:5001
+      - BASE_URL_JOB_SERVICE=http://job:5002
+      - BASE_URL_APPLICATION_SERVICE=http://application:5003
+      - BASE_URL_AUTHENTICATION_SERVICE=http://authentication:5004
+    deploy:
+      replicas: 2
+      restart_policy:
+        max_attempts: 2
+        condition: on-failure
+      update_config:
+        parallelism: 2
+        delay: 10s
+    volumes:
+      - .:/app
+      - /app/gateway/node_modules
+    networks:
+      - topdev
+
+  application:
+    image: pbhuy/application
+    hostname: application
+    environment:
+      - PORT=5003
+      - DB_PG_URI=postgresql://applicationservice_owner:ogutmx7v0cGd@ep-lucky-violet-a1cihzw1.ap-southeast-1.aws.neon.tech/applicationservice?sslmode=require
+      - PROTO_PATH=../proto/job-service.proto
+      - GRPC_JOB_SERVER=job:8002
+      - GRPC_AUTH_SERVER=authentication:8004
+      - REDIS_URL=redis:6379
+      - REDIS_EXPIRATION=3600
+    ports:
+      - '5003:5003'
+    restart: always
+    deploy:
+      replicas: 2
+      restart_policy:
+        max_attempts: 2
+        condition: on-failure
+      update_config:
+        parallelism: 2
+        delay: 10s
+    volumes:
+      - .:/app
+      - /app/services/application/node_modules
+    networks:
+      - topdev
+
+  nginx-loadbalancer:
+    image: pbhuy/nginx-loadbalancer
+    hostname: nginx-loadbalancer
+    ports:
+      - 80:80
+    depends_on:
+      - user
+      - job
+      - application
+      - authentication
+      - keycloak
+      - redis
+    deploy:
+      replicas: 2
+      restart_policy:
+        max_attempts: 2
+        condition: on-failure
+      update_config:
+        parallelism: 2
+        delay: 10s
+      placement:
+        constraints: [node.role == manager]
+    networks:
+      - topdev
+
+  user:
+    image: pbhuy/user
+    hostname: user
+    ports:
+      - '5001:5001'
+    restart: always
+    environment:
+      - PORT=5001
+      - DB_POSTGRE_PORT=5432
+      - DB_POSTGRE_HOST='ep-mute-wave-a1zmdjxp.ap-southeast-1.aws.neon.tech'
+      - DB_POSTGRE_DBNAME='userdb'
+      - DB_POSTGRE_USERNAME='userdb_owner'
+      - DB_POSTGRE_PASSWORD='JtQEusP7FkV1'
+      - ENDPOINT_ID='ep-mute-wave-a1zmdjxp'
+      - DB_PG_URI=postgresql://userdb_owner:JtQEusP7FkV1@ep-mute-wave-a1zmdjxp.ap-southeast-1.aws.neon.tech/userdb?sslmode=require
+    deploy:
+      replicas: 2
+      restart_policy:
+        max_attempts: 2
+        condition: on-failure
+      update_config:
+        parallelism: 2
+        delay: 10s
+    volumes:
+      - .:/app
+      - /app/services/user/node_modules
+    networks:
+      - topdev
+
+  job:
+    image: pbhuy/job
+    hostname: job
+    environment:
+      - PORT=5002
+      - DB_PG_URI=postgresql://jobservice_owner:nvrek9T0KdAS@ep-old-cherry-a1vxzzc9.ap-southeast-1.aws.neon.tech/jobservice?sslmode=require
+      - DB_MONGO_URI=mongodb://mongo-router:27017/jobservice
+      - PROTO_PATH=../proto/job-service.proto
+      - GRPC_JOB_SERVER=job:8002
+      - AUTH_HOST=authentication:5004
+      - GRPC_AUTH_SERVER=authentication:8004
+      - ES_HOST=http://elasticsearch:9200
+      - ES_USERNAME=elastic
+      - ES_PW=aA@12345678
+    ports:
+      - '5002:5002'
+    restart: always
+    deploy:
+      replicas: 2
+      restart_policy:
+        max_attempts: 2
+        condition: on-failure
+      update_config:
+        parallelism: 2
+        delay: 10s
+    depends_on:
+      - mongo-router
+    volumes:
+      - .:/app
+      - /app/services/job/node_modules
+    networks:
+      - topdev
+
+  redis:
+    hostname: redis
+    image: redis:latest
+    ports:
+      - '6379:6379'
+    restart: always
+    networks:
+      - topdev
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:24.0.3
+    hostname: keycloak
+    ports:
+      - '8080:8080'
+    environment:
+      - KC_HEALTH_ENABLED=true
+      - KC_METRICS_ENABLED=true
+      - KC_DB=postgres
+      - KC_DB_URL=jdbc:postgresql://ep-late-cloud-a1qog1c7.ap-southeast-1.aws.neon.tech/keycloak?sslmode=require
+      - KC_DB_USERNAME=default
+      - KC_DB_PASSWORD=6V1OocaldpND
+      - KC_KEYCLOAK_ADMIN=admin
+      - KC_KEYCLOAK_ADMIN_PASSWORD=change_me
+    command: ['start-dev']
+    networks:
+      - topdev
+
+  authentication:
+    image: pbhuy/authentication
+    hostname: authentication
+    environment:
+      - PORT=5004
+      - GRPC_AUTH_SERVER=authentication:8004
+      - KC_REALM=Topdev
+      - KC_SERVER_URL=http://keycloak:8080
+      - KC_CLIENT_ID=TopdevClient
+      - KC_CLIENT_UUID=c3327e9c-35da-4a69-ac14-32340017013b
+      - KC_CLIENT_SECRET=CVZpQxvQm142DpWymk6zpooxTzeFwTF5
+      - KC_ADMIN_USERNAME=admin
+      - KC_ADMIN_PASSWORD=change_me
+      - JOB_HOST=http://job:5002
+      - GRPC_JOB_SERVER=job:8002
+      - KEYCLOAK_DEFAULT_USER_PASSWORD=change_me
+      - GITHUB_CLIENT_ID=Ov23lifEHe1ghBAepFbw
+      - GITHUB_CLIENT_SECRET=ddb3348dfbd668e8a7c8311a858a52417657872e
+      - AUTHENTICATION_HOST=http://authentication:5004
+      - DB_POSTGRE_PORT=5432
+      - DB_POSTGRE_HOST='ep-mute-wave-a1zmdjxp.ap-southeast-1.aws.neon.tech'
+      - DB_POSTGRE_DBNAME='userdb'
+      - DB_POSTGRE_USERNAME='userdb_owner'
+      - DB_POSTGRE_PASSWORD='JtQEusP7FkV1'
+      - ENDPOINT_ID='ep-mute-wave-a1zmdjxp'
+      - DB_PG_URI=postgresql://userdb_owner:JtQEusP7FkV1@ep-mute-wave-a1zmdjxp.ap-southeast-1.aws.neon.tech/userdb?sslmode=require
+    ports:
+      - '5004:5004'
+    restart: always
+    deploy:
+      replicas: 2
+      restart_policy:
+        max_attempts: 2
+        condition: on-failure
+      update_config:
+        parallelism: 2
+        delay: 10s
+    volumes:
+      - .:/app
+      - /app/services/authentication/node_modules
+    networks:
+      - topdev
+    depends_on:
+      - keycloak
+
+networks:
+  topdev:
+    driver: overlay

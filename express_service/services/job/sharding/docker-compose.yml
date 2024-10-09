@@ -1,0 +1,85 @@
+version: '3.7'
+
+services:
+  configserver1:
+    image: mongo
+    container_name: configserver1
+    command: mongod --configsvr --replSet cfgrs --port 27019 --dbpath /data/db --bind_ip 0.0.0.0
+    volumes:
+      - configserver1:/data/db
+    networks:
+      - express_service_topdev
+
+  configserver2:
+    image: mongo
+    container_name: configserver2
+    command: mongod --configsvr --replSet cfgrs --port 27019 --dbpath /data/db --bind_ip 0.0.0.0
+    volumes:
+      - configserver2:/data/db
+    networks:
+      - express_service_topdev
+
+  configserver3:
+    image: mongo
+    container_name: configserver3
+    command: mongod --configsvr --replSet cfgrs --port 27019 --dbpath /data/db --bind_ip 0.0.0.0
+    volumes:
+      - configserver3:/data/db
+    networks:
+      - express_service_topdev
+
+  shardserver1:
+    container_name: shardserver1
+    image: mongo
+    command: mongod --shardsvr --replSet shardrs --port 27018 --dbpath /data/db --bind_ip 0.0.0.0
+    volumes:
+      - shardserver1:/data/db
+    networks:
+      - express_service_topdev
+
+  shardserver2:
+    container_name: shardserver2
+    image: mongo
+    command: mongod --shardsvr --replSet shardrs --port 27018 --dbpath /data/db --bind_ip 0.0.0.0
+    volumes:
+      - shardserver2:/data/db
+    networks:
+      - express_service_topdev
+
+  shardserver3:
+    container_name: shardserver3
+    image: mongo
+    command: mongod --shardsvr --replSet shardrs --port 27018 --dbpath /data/db --bind_ip 0.0.0.0
+    volumes:
+      - shardserver3:/data/db
+    networks:
+      - express_service_topdev
+
+  mongo-router:
+    container_name: mongo-router
+    image: mongo
+    command: mongos --configdb cfgrs/configserver1:27019,configserver2:27019,configserver3:27019 --port 27017 --bind_ip 0.0.0.0
+    ports:
+      - 27017:27017
+    depends_on:
+      - configserver1
+      - configserver2
+      - configserver3
+      - shardserver1
+      - shardserver2
+      - shardserver3
+    networks:
+      - express_service_topdev
+
+volumes:
+  configserver1:
+  configserver2:
+  configserver3:
+  shardserver1:
+  shardserver2:
+  shardserver3:
+
+networks:
+  express_service_topdev:
+    external:
+      name: express_service_topdev

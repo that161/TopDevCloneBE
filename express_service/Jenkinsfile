@@ -1,0 +1,61 @@
+pipeline {
+    agent any
+
+    tools {
+        nodejs '20.13.1' // Use the configured Node.js version
+    }
+
+    stages {
+
+        // stage('Run Tests') {
+        //     steps {
+        //         script {
+        //           dir('express_service/services/job'){
+        //             sh 'npm i'
+        //             sh 'cp .env.example .env'
+        //             sh 'npm test -- --forceExit'
+        //           }
+        //         }
+        //     }
+        // }
+
+
+        stage('Deploy') {
+            steps {
+                script {
+                    sshagent(credentials:['topdevclone-vm']) {
+                        // Ensure the .ssh directory exists and then add the host key to known_hosts
+                        sh """
+                        mkdir -p ~/.ssh
+                        ssh-keyscan -H 20.6.10.42 >> ~/.ssh/known_hosts
+                        """
+
+                        // Deployment commands
+                        sh """    
+                        ssh -t azure@20.6.10.42 'sudo rm -rf TopDevCloneBE && git clone https://github.com/kuroneko2002/TopDevCloneBE.git && cd TopDevCloneBE/express_service && docker stack rm express_service && docker rm -vf \$(docker ps -aq) && sleep 10s && docker rmi -f \$(docker images -aq) && sleep 10s && docker compose build && docker tag express_service-authentication pbhuy/authentication:latest && docker push pbhuy/authentication && docker tag express_service-job pbhuy/job:latest && docker push pbhuy/job && docker tag express_service-user pbhuy/user:latest && docker push pbhuy/user && docker tag express_service-application pbhuy/application:latest && docker push pbhuy/application && docker tag express_service-gateway pbhuy/gateway:latest && docker push pbhuy/gateway && docker tag express_service-nginx-loadbalancer pbhuy/nginx-loadbalancer:latest && docker push pbhuy/nginx-loadbalancer'      
+                        """
+                    }
+                }
+            }
+        }
+
+        stage('deploy swarm') {
+            steps {
+                script {
+                    sshagent(credentials:['topdevclone-vm']) {
+                        // Ensure the .ssh directory exists and then add the host key to known_hosts
+                        sh """
+                        mkdir -p ~/.ssh
+                        ssh-keyscan -H 20.6.10.42 >> ~/.ssh/known_hosts
+                        """
+
+                        // Deployment commands
+                        sh """
+                        ssh -t azure@20.6.10.42 'cd TopDevCloneBE/express_service && docker system prune -f && sleep 10s && docker stack deploy -c docker-deploy.yml express_service'
+                        """
+                    }
+                }
+            }
+        }
+    }
+}
